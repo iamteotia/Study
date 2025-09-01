@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer</title>
+    <style>
+        :root {
+            --soothing-hue: hsl(210, 30%, 90%);
+            --text-color: #333;
+            --button-color: hsl(210, 50%, 75%);
+            --button-hover: hsl(210, 50%, 65%);
+            --timer-bg: hsla(210, 30%, 95%, 0.7);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: var(--soothing-hue);
+            color: var(--text-color);
+            transition: background-color 0.5s ease;
+        }
+
+        .pomodoro-container {
+            background-color: var(--timer-bg);
+            padding: 2.5rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 450px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .timer {
+            font-size: 5rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.8rem;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            background-color: var(--button-color);
+            color: var(--text-color);
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            background-color: var(--button-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .settings {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+            text-align: left;
+        }
+
+        .setting-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1rem;
+        }
+
+        .setting-group label {
+            font-weight: 500;
+        }
+
+        .setting-group input {
+            width: 70px;
+            padding: 0.5rem;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .alert-message {
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="pomodoro-container">
+        <h1>Pomodoro Timer</h1>
+        <div class="timer" id="timer">25:00</div>
+        <div class="controls">
+            <button class="btn" id="start-btn">Start</button>
+            <button class="btn" id="pause-btn">Pause</button>
+            <button class="btn" id="reset-btn">Reset</button>
+        </div>
+        <div class="settings">
+            <div class="setting-group">
+                <label for="focus-duration">Focus Time (min):</label>
+                <input type="number" id="focus-duration" value="25" min="1" max="60">
+            </div>
+            <div class="setting-group">
+                <label for="break-duration">Break Time (min):</label>
+                <input type="number" id="break-duration" value="5" min="1" max="60">
+            </div>
+        </div>
+    </div>
+
+    <audio id="beep-sound" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" preload="auto"></audio>
+
+    <script>
+        const timerElement = document.getElementById('timer');
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const focusDurationInput = document.getElementById('focus-duration');
+        const breakDurationInput = document.getElementById('break-duration');
+        const beepSound = document.getElementById('beep-sound');
+
+        let timerInterval;
+        let isRunning = false;
+        let isFocusTime = true;
+        let timeLeft;
+
+        function updateTimerDisplay(timeInSeconds) {
+            const minutes = Math.floor(timeInSeconds / 60);
+            const seconds = timeInSeconds % 60;
+            timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            startBtn.textContent = 'Continue';
+            
+            if (timeLeft === undefined) {
+                timeLeft = parseInt(focusDurationInput.value) * 60;
+            }
+
+            timerInterval = setInterval(() => {
+                if (timeLeft <= 0) {
+                    endTimer();
+                    return;
+                }
+                timeLeft--;
+                updateTimerDisplay(timeLeft);
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            if (!isRunning) return;
+            isRunning = false;
+            clearInterval(timerInterval);
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            isFocusTime = true;
+            timeLeft = parseInt(focusDurationInput.value) * 60;
+            updateTimerDisplay(timeLeft);
+            startBtn.textContent = 'Start';
+        }
+
+        function playBeepSound(times) {
+            let count = 0;
+            const interval = setInterval(() => {
+                if (count >= times) {
+                    clearInterval(interval);
+                    return;
+                }
+                beepSound.play();
+                count++;
+            }, 500);
+        }
+
+        function endTimer() {
+            pauseTimer();
+            playBeepSound(5);
+            
+            if (isFocusTime) {
+                isFocusTime = false;
+                timeLeft = parseInt(breakDurationInput.value) * 60;
+                timerElement.textContent = `Break!`;
+                
+                // Change background color for break time
+                document.body.style.backgroundColor = 'hsl(120, 30%, 90%)';
+            } else {
+                isFocusTime = true;
+                timeLeft = parseInt(focusDurationInput.value) * 60;
+                timerElement.textContent = `Focus!`;
+                
+                // Revert to original background color
+                document.body.style.backgroundColor = 'hsl(210, 30%, 90%)';
+            }
+            
+            setTimeout(() => {
+                updateTimerDisplay(timeLeft);
+                startBtn.textContent = 'Start Next';
+            }, 2000); // Wait a bit before showing new time
+        }
+
+        startBtn.addEventListener('click', startTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
+        resetBtn.addEventListener('click', resetTimer);
+
+        focusDurationInput.addEventListener('change', () => {
+            if (!isRunning) {
+                timeLeft = parseInt(focusDurationInput.value) * 60;
+                updateTimerDisplay(timeLeft);
+            }
+        });
+
+        breakDurationInput.addEventListener('change', () => {
+            if (!isRunning && !isFocusTime) {
+                timeLeft = parseInt(breakDurationInput.value) * 60;
+                updateTimerDisplay(timeLeft);
+            }
+        });
+
+        // Initialize with default focus time
+        updateTimerDisplay(parseInt(focusDurationInput.value) * 60);
+
+    </script>
+
+</body>
+</html>
